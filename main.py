@@ -1,18 +1,5 @@
 from threading import Thread
 from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot active!")
-    def log_message(self, *args):
-        pass
-        
-def web_sunucu():
-    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
-
-Thread(target=web_sunucu, daemon=True).start()
 import requests
 import schedule
 import time
@@ -22,8 +9,10 @@ TELEGRAM_TOKEN   = "8061752013:AAHoLdP85_d77ibhj8JTX6IdjNo5J_XMrTA"
 TELEGRAM_CHAT_ID = "1473625303"
 COINGECKO_KEY    = "CG-PYL1qRSqmnKDXBehAKCwMzv7"
 TWELVE_KEY       = "50bf4829752d400db746c13cbdf42f4c"
+
 gonderilen = {}
 son_update_id = 0
+
 BIST100 = [
     "AKBNK","ARCLK","ASELS","BIMAS","DOHOL","EKGYO","EREGL","FROTO","GARAN","GUBRF",
     "HALKB","ISCTR","KCHOL","KOZAL","KRDMD","MGROS","PETKM","PGSUS","SAHOL","SASA",
@@ -34,6 +23,7 @@ BIST100 = [
     "GEREL","GLYHO","GOLTS","GOODY","GRSEL","GSDHO","GSRAY","HATEK","HEKTS","HLGYO",
     "HRKET","HUNER","ICBCT","IHEVA","IHLAS","IMASM","INDES","INFO","INVEO","IPEKE",
 ]
+
 veriler = {
     "kripto": [
         ("bitcoin", "BTC"), ("ethereum", "ETH"), ("binancecoin", "BNB"),
@@ -45,37 +35,18 @@ veriler = {
         ("uniswap", "UNI"), ("ethereum-classic", "ETC"),
     ]
 }
-def veri_cek_bist(sembol):
-    url = f"https://api.twelvedata.com/time_series?symbol={sembol}&exchange=BIST&interval=1day&outputsize=300&apikey={TWELVE_KEY}"
-    r = requests.get(url, timeout=15)
-    data = r.json()
-    if "values" not in data:
-        raise Exception(f"veri yok")
-    return [float(x["close"]) for x in reversed(data["values"])]
 
-def bist_tara():
-    telegram_gonder(f"BIST tarama basliyor... ({len(BIST100)} hisse)")
-    for sembol in BIST100:
-        try:
-            fiyatlar = veri_cek_bist(sembol)
-            al, al_yeni = sart_kontrol(fiyatlar, "al")
-            sat, sat_yeni = sart_kontrol(fiyatlar, "sat")
-            if al_yeni and not gonderilen.get(f"{sembol}_al"):
-                telegram_gonder(f"AL SINYALI (BIST)\n{sembol}")
-                gonderilen[f"{sembol}_al"] = True
-            elif not al:
-                gonderilen[f"{sembol}_al"] = False
-            if sat_yeni and not gonderilen.get(f"{sembol}_sat"):
-                telegram_gonder(f"SAT SINYALI (BIST)\n{sembol}")
-                gonderilen[f"{sembol}_sat"] = True
-            elif not sat:
-                gonderilen[f"{sembol}_sat"] = False
-            print(f"{sembol} AL:{'OK' if al else '-'} SAT:{'OK' if sat else '-'}")
-            time.sleep(8)
-        except Exception as e:
-            print(f"{sembol} hata: {e}")
-            time.sleep(10)
-    telegram_gonder("BIST tarama tamamlandi!")
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot active!")
+    def log_message(self, *args):
+        pass
+
+def web_sunucu():
+    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
+
 def telegram_gonder(mesaj):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
@@ -87,6 +58,14 @@ def veri_cek_kripto(coin_id, days):
     url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/ohlc?vs_currency=usd&days={days}&x_cg_demo_api_key={COINGECKO_KEY}"
     r = requests.get(url, timeout=15)
     return [float(x[4]) for x in r.json()]
+
+def veri_cek_bist(sembol):
+    url = f"https://api.twelvedata.com/time_series?symbol={sembol}&exchange=BIST&interval=1day&outputsize=300&apikey={TWELVE_KEY}"
+    r = requests.get(url, timeout=15)
+    data = r.json()
+    if "values" not in data:
+        raise Exception("veri yok")
+    return [float(x["close"]) for x in reversed(data["values"])]
 
 def ema_dizi(fiyatlar, period):
     k = 2 / (period + 1)
@@ -128,13 +107,13 @@ def kripto_tara():
             time.sleep(3)
 
             if gun_al_yeni and not gonderilen.get(f"{sembol}_gun_al"):
-                telegram_gonder(f"AL SINYALI (Gunluk)\n{sembol}\nTum sartlar olusту!")
+                telegram_gonder(f"AL SINYALI (Gunluk)\n{sembol}")
                 gonderilen[f"{sembol}_gun_al"] = True
             elif not gun_al:
                 gonderilen[f"{sembol}_gun_al"] = False
 
             if dort_al_yeni and not gonderilen.get(f"{sembol}_dort_al"):
-                telegram_gonder(f"AL SINYALI (4 Saatlik)\n{sembol}\nTum sartlar olusту!")
+                telegram_gonder(f"AL SINYALI (4 Saatlik)\n{sembol}")
                 gonderilen[f"{sembol}_dort_al"] = True
             elif not dort_al:
                 gonderilen[f"{sembol}_dort_al"] = False
@@ -152,7 +131,7 @@ def kripto_tara():
                 gonderilen[f"{sembol}_dort_sat"] = False
 
             if gun_al and dort_al and gun_al_yeni and dort_al_yeni:
-                telegram_gonder(f"GUCLU AL SINYALI!\n{sembol}\nHem gunluk hem 4 saatlik!")
+                telegram_gonder(f"GUCLU AL SINYALI!\n{sembol}")
 
             print(f"{sembol} Gun AL:{'OK' if gun_al else '-'} SAT:{'OK' if gun_sat else '-'} | 4S AL:{'OK' if dort_al else '-'} SAT:{'OK' if dort_sat else '-'}")
 
@@ -161,6 +140,30 @@ def kripto_tara():
             time.sleep(5)
 
     telegram_gonder("Kripto tarama tamamlandi!")
+
+def bist_tara():
+    telegram_gonder(f"BIST tarama basliyor... ({len(BIST100)} hisse)")
+    for sembol in BIST100:
+        try:
+            fiyatlar = veri_cek_bist(sembol)
+            al, al_yeni = sart_kontrol(fiyatlar, "al")
+            sat, sat_yeni = sart_kontrol(fiyatlar, "sat")
+            if al_yeni and not gonderilen.get(f"{sembol}_al"):
+                telegram_gonder(f"AL SINYALI (BIST)\n{sembol}")
+                gonderilen[f"{sembol}_al"] = True
+            elif not al:
+                gonderilen[f"{sembol}_al"] = False
+            if sat_yeni and not gonderilen.get(f"{sembol}_sat"):
+                telegram_gonder(f"SAT SINYALI (BIST)\n{sembol}")
+                gonderilen[f"{sembol}_sat"] = True
+            elif not sat:
+                gonderilen[f"{sembol}_sat"] = False
+            print(f"{sembol} AL:{'OK' if al else '-'} SAT:{'OK' if sat else '-'}")
+            time.sleep(8)
+        except Exception as e:
+            print(f"{sembol} hata: {e}")
+            time.sleep(10)
+    telegram_gonder("BIST tarama tamamlandi!")
 
 def komut_dinle():
     global son_update_id
@@ -173,40 +176,32 @@ def komut_dinle():
                 son_update_id = update["update_id"]
                 mesaj = update.get("message", {}).get("text", "")
                 print(f"Komut: {mesaj}")
-
                 if mesaj == "/tara":
                     threading.Thread(target=kripto_tara).start()
                 elif mesaj == "/bist":
                     threading.Thread(target=bist_tara).start()
-                    
                 elif mesaj.startswith("/ekle "):
                     parca = mesaj.split()
                     if len(parca) == 3:
-                        coin_id = parca[1].lower()
-                        sembol = parca[2].upper()
-                        veriler["kripto"].append((coin_id, sembol))
-                        telegram_gonder(f"{sembol} listeye eklendi!")
+                        veriler["kripto"].append((parca[1].lower(), parca[2].upper()))
+                        telegram_gonder(f"{parca[2].upper()} eklendi!")
                     else:
-                        telegram_gonder("Format: /ekle coin-id SEMBOL\nornek: /ekle avalanche-2 AVAX")
-
+                        telegram_gonder("Format: /ekle coin-id SEMBOL")
                 elif mesaj.startswith("/sil "):
                     sembol = mesaj.split()[1].upper()
                     veriler["kripto"] = [(c, s) for c, s in veriler["kripto"] if s != sembol]
-                    telegram_gonder(f"{sembol} listeden silindi!")
-
+                    telegram_gonder(f"{sembol} silindi!")
                 elif mesaj == "/liste":
-                    liste = "\n".join([s for _, s in veriler["kripto"]])
-                    telegram_gonder(f"Kriptolar:\n{liste}")
-
+                    telegram_gonder("Kriptolar:\n" + "\n".join([s for _, s in veriler["kripto"]]))
                 elif mesaj == "/yardim":
                     telegram_gonder("/tara - Kripto tara\n/bist - BIST tara\n/ekle bitcoin BTC - Ekle\n/sil BTC - Sil\n/liste - Liste")
-
         except Exception as e:
             print(f"Komut hatasi: {e}")
             time.sleep(5)
 
+Thread(target=web_sunucu, daemon=True).start()
 threading.Thread(target=komut_dinle, daemon=True).start()
-telegram_gonder("Sinyal Botu aktif!\n/yardim yaz komutlari gor.")
+telegram_gonder("Sinyal Botu aktif! /yardim yaz.")
 kripto_tara()
 schedule.every(4).hours.do(kripto_tara)
 
