@@ -60,12 +60,11 @@ def veri_cek_kripto(coin_id, days):
     return [float(x[4]) for x in r.json()]
 
 def veri_cek_bist(sembol):
-    url = f"https://api.twelvedata.com/time_series?symbol={sembol}&exchange=BIST&interval=1day&outputsize=300&apikey={TWELVE_KEY}"
-    r = requests.get(url, timeout=15)
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{sembol}.IS?interval=1d&range=2y"
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
     data = r.json()
-    if "values" not in data:
-        raise Exception("veri yok")
-    return [float(x["close"]) for x in reversed(data["values"])]
+    fiyatlar = data["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+    return [f for f in fiyatlar if f is not None]
 
 def ema_dizi(fiyatlar, period):
     k = 2 / (period + 1)
