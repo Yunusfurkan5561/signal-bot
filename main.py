@@ -1,3 +1,18 @@
+from threading import Thread
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot calisıyor!")
+    def log_message(self, *args):
+        pass
+
+def web_sunucu():
+    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
+
+Thread(target=web_sunucu, daemon=True).start()
 import requests
 import schedule
 import time
@@ -163,6 +178,7 @@ def komut_dinle():
                     threading.Thread(target=kripto_tara).start()
                 elif mesaj == "/bist":
                     threading.Thread(target=bist_tara).start()
+                    
                 elif mesaj.startswith("/ekle "):
                     parca = mesaj.split()
                     if len(parca) == 3:
