@@ -192,8 +192,10 @@ def komut_dinle():
                     telegram_gonder(f"{sembol} silindi!")
                 elif mesaj == "/liste":
                     telegram_gonder("Kriptolar:\n" + "\n".join([s for _, s in veriler["kripto"]]))
+                elif mesaj == "/bistliste":
+                    telegram_gonder("BIST100:\n" + "\n".join(BIST100))
                 elif mesaj == "/yardim":
-                    telegram_gonder("/tara - Kripto tara\n/bist - BIST tara\n/ekle bitcoin BTC - Ekle\n/sil BTC - Sil\n/liste - Liste")
+                    telegram_gonder("/tara - Kripto tara\n/bist - BIST tara\n/liste - Kripto listesi\n/bistliste - BIST listesi\n/ekle bitcoin BTC - Ekle\n/sil BTC - Sil\n/yardim - Yardim")
         except Exception as e:
             print(f"Komut hatasi: {e}")
             time.sleep(5)
