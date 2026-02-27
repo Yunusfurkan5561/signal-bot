@@ -203,7 +203,7 @@ threading.Thread(target=komut_dinle, daemon=True).start()
 telegram_gonder("Sinyal Botu aktif! /yardim yaz.")
 kripto_tara()
 schedule.every(4).hours.do(kripto_tara)
-
+schedule.every(4).hours.do(bist_tara)
 while True:
     schedule.run_pending()
     time.sleep(60)
