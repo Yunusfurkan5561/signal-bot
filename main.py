@@ -174,8 +174,7 @@ def komut_dinle():
             for update in updates:
                 son_update_id = update["update_id"]
                 mesaj = update.get("message", {}).get("text", "")
-                chat_id = str(update.get("message", {}).get("chat", {}).get("id", ""))
-if chat_id != TELEGRAM_CHAT_ID:
+if str(update.get("message", {}).get("chat", {}).get("id", "")) != TELEGRAM_CHAT_ID:
     continue
                 print(f"Komut: {mesaj}")
                 if mesaj == "/tara":
