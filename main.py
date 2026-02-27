@@ -5,7 +5,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot calisıyor!")
+        self.wfile.write(b"Bot active!")
     def log_message(self, *args):
         pass
         
