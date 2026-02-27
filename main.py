@@ -8,7 +8,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot calisıyor!")
     def log_message(self, *args):
         pass
-
+        
 def web_sunucu():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
