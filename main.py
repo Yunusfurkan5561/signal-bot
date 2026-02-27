@@ -6,12 +6,13 @@ import time
 import threading
 
 TELEGRAM_TOKEN   = "8061752013:AAHoLdP85_d77ibhj8JTX6IdjNo5J_XMrTA"
-TELEGRAM_CHAT_ID = "1473625303"
+ADMIN_CHAT_ID    = "1473625303"
 COINGECKO_KEY    = "CG-PYL1qRSqmnKDXBehAKCwMzv7"
 TWELVE_KEY       = "50bf4829752d400db746c13cbdf42f4c"
 
 gonderilen = {}
 son_update_id = 0
+kullanicilar = set()
 
 BIST100 = [
     "AKBNK","ARCLK","ASELS","BIMAS","DOHOL","EKGYO","EREGL","FROTO","GARAN","GUBRF",
@@ -47,12 +48,14 @@ class Handler(BaseHTTPRequestHandler):
 def web_sunucu():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
-def telegram_gonder(mesaj):
+def telegram_gonder(mesaj, chat_id=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try:
-        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": mesaj}, timeout=10)
-    except Exception as e:
-        print(f"Telegram hata: {e}")
+    hedefler = [chat_id] if chat_id else list(kullanicilar) + [ADMIN_CHAT_ID]
+    for cid in hedefler:
+        try:
+            requests.post(url, json={"chat_id": cid, "text": mesaj}, timeout=10)
+        except Exception as e:
+            print(f"Telegram hata ({cid}): {e}")
 
 def veri_cek_kripto(coin_id, days):
     url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/ohlc?vs_currency=usd&days={days}&x_cg_demo_api_key={COINGECKO_KEY}"
@@ -174,37 +177,68 @@ def komut_dinle():
             for update in updates:
                 son_update_id = update["update_id"]
                 mesaj = update.get("message", {}).get("text", "")
-                if str(update.get("message", {}).get("chat", {}).get("id", "")) != TELEGRAM_CHAT_ID:
+                chat_id = str(update.get("message", {}).get("chat", {}).get("id", ""))
+                if not chat_id:
                     continue
-                print(f"Komut: {mesaj}")
-                if mesaj == "/tara":
-                    threading.Thread(target=kripto_tara).start()
-                elif mesaj == "/bist":
-                    threading.Thread(target=bist_tara).start()
-                elif mesaj.startswith("/ekle "):
+
+                # Her mesaj atan kullaniciyi kaydet
+                kullanicilar.add(chat_id)
+
+                print(f"Komut: {mesaj} | Chat: {chat_id}")
+
+                # Sadece admin yapabilir
+                if mesaj.startswith("/ekle "):
+                    if chat_id != ADMIN_CHAT_ID:
+                        telegram_gonder("Bu komut sadece admin icin.", chat_id)
+                        continue
                     parca = mesaj.split()
                     if len(parca) == 3:
                         veriler["kripto"].append((parca[1].lower(), parca[2].upper()))
                         telegram_gonder(f"{parca[2].upper()} eklendi!")
                     else:
-                        telegram_gonder("Format: /ekle coin-id SEMBOL")
+                        telegram_gonder("Format: /ekle coin-id SEMBOL", chat_id)
+
                 elif mesaj.startswith("/sil "):
+                    if chat_id != ADMIN_CHAT_ID:
+                        telegram_gonder("Bu komut sadece admin icin.", chat_id)
+                        continue
                     sembol = mesaj.split()[1].upper()
                     veriler["kripto"] = [(c, s) for c, s in veriler["kripto"] if s != sembol]
                     telegram_gonder(f"{sembol} silindi!")
+
+                # Herkes yapabilir
+                elif mesaj == "/start":
+                    telegram_gonder("Merhaba! Sinyal botuna hosgeldin. /yardim yaz.", chat_id)
+
+                elif mesaj == "/tara":
+                    threading.Thread(target=kripto_tara).start()
+
+                elif mesaj == "/bist":
+                    threading.Thread(target=bist_tara).start()
+
                 elif mesaj == "/liste":
-                    telegram_gonder("Kriptolar:\n" + "\n".join([s for _, s in veriler["kripto"]]))
+                    telegram_gonder("Kriptolar:\n" + "\n".join([s for _, s in veriler["kripto"]]), chat_id)
+
                 elif mesaj == "/bistliste":
-                    telegram_gonder("BIST100:\n" + "\n".join(BIST100))
+                    telegram_gonder("BIST100:\n" + "\n".join(BIST100), chat_id)
+
                 elif mesaj == "/yardim":
-                    telegram_gonder("/tara - Kripto tara\n/bist - BIST tara\n/liste - Kripto listesi\n/bistliste - BIST listesi\n/ekle bitcoin BTC - Ekle\n/sil BTC - Sil\n/yardim - Yardim")
+                    telegram_gonder(
+                        "/tara - Kripto tara\n"
+                        "/bist - BIST tara\n"
+                        "/liste - Kripto listesi\n"
+                        "/bistliste - BIST listesi\n"
+                        "/yardim - Yardim",
+                        chat_id
+                    )
+
         except Exception as e:
             print(f"Komut hatasi: {e}")
             time.sleep(5)
 
 Thread(target=web_sunucu, daemon=True).start()
 threading.Thread(target=komut_dinle, daemon=True).start()
-telegram_gonder("Sinyal Botu aktif! /yardim yaz.")
+telegram_gonder(f"Sinyal Botu aktif! /yardim yaz.")
 kripto_tara()
 schedule.every(4).hours.do(kripto_tara)
 schedule.every(4).hours.do(bist_tara)
